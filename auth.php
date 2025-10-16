@@ -55,6 +55,20 @@ class auth_plugin_authmantis extends DokuWiki_Auth_Plugin {
 	}
 
 	/**
+	 * Gets the project ID
+	 * @param   string    $name Project name
+	 * @return  int             Project ID
+	 */
+	private function getProjectId( $name ) {
+		foreach ( project_get_all_rows() as $id => $project ) {
+			if ( $name === cleanID( $project['name'] ) ) {
+				return $id;
+			}
+		}
+		return ALL_PROJECTS;
+	}
+
+	/**
 	 * Authenticates the user using Mantis APIs.
 	 * @param   string  $user    Username
 	 * @param   string  $pass    Cleartext Password
@@ -112,7 +126,7 @@ class auth_plugin_authmantis extends DokuWiki_Auth_Plugin {
 
 		return $ValidUser;
 	}
-	
+
 	/**
 	 * Logout from Mantis
 	 */
@@ -151,9 +165,11 @@ class auth_plugin_authmantis extends DokuWiki_Auth_Plugin {
 			$t_project_name = explode( ':', getNS( getID() ) );
 		}
 
-		if( array_key_exists( 1, $t_project_name ) ) {
-			$t_project_id = project_get_id_by_name( $t_project_name[1] );
-			$t_project_name = strtoupper( $t_project_name[1] );
+		$mantis_ns = config_get_global( 'wiki_root_namespace' );
+		$project_name_index = is_blank( $mantis_ns ) ? 0 : 1;
+		if( array_key_exists( $project_name_index, $t_project_name ) ) {
+			$t_project_id = $this->getProjectId( $t_project_name[$project_name_index] );
+			$t_project_name = strtoupper( $t_project_name[$project_name_index] );
 		}
 		else {
 			$t_project_id = ALL_PROJECTS;
@@ -161,7 +177,7 @@ class auth_plugin_authmantis extends DokuWiki_Auth_Plugin {
 		$t_access_level_string = strtoupper(
 			MantisEnum::getLabel(
 				config_get( 'access_levels_enum_string' ),
-				access_get_project_level( $t_project_id )
+				access_get_project_level( $t_project_id, $p_user_id )
 			)
 		);
 		$t_access_levels = array( $t_access_level_string );
